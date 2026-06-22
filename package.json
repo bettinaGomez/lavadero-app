@@ -1,0 +1,15 @@
+{
+  "name": "lavadero_app",
+  "version": "1.0.0",
+  "description": "Sistema de gestion de lavadero",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "express-session": "^1.17.3",
+    "bcrypt": "^5.1.1"
+  }
+}

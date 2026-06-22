@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Lavadero App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f0ff; min-height: 100vh; }
+
+        .topbar {
+            background: linear-gradient(135deg, #553c9a, #44337a);
+            color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .topbar h1 { font-size: 20px; }
+        .logout-btn {
+            background: rgba(255,255,255,0.2); color: white;
+            border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .tab {
+            padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            border: 2px solid #553c9a; color: #553c9a; background: white;
+            font-size: 14px; font-weight: bold;
+        }
+        .tab.active { background: #553c9a; color: white; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .card {
+            background: white; border-radius: 12px; padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px;
+        }
+        .card h2 { color: #444; margin-bottom: 18px; font-size: 18px; }
+
+        .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card {
+            background: white; border-radius: 10px; padding: 20px;
+            text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .stat-num { font-size: 32px; font-weight: bold; color: #553c9a; }
+        .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
+
+        label { display: block; margin-bottom: 5px; color: #555; font-size: 14px; font-weight: bold; }
+        input[type="date"], input[type="text"], input[type="number"] {
+            padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 15px; margin-bottom: 12px;
+        }
+        input[type="date"], input[type="text"] { width: 100%; }
+
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 14px; font-weight: bold;
+        }
+        .btn-primary { background: #553c9a; color: white; }
+        .btn-primary:hover { background: #44337a; }
+        .btn-danger { background: #e53e3e; color: white; padding: 6px 12px; font-size: 13px; }
+        .btn-edit { background: #4299e1; color: white; padding: 6px 12px; font-size: 13px; }
+        .btn-save { background: #48bb78; color: white; padding: 6px 12px; font-size: 13px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f7f3ff; color: #553c9a; padding: 12px; text-align: left; font-size: 14px; }
+        td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #444; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #faf7ff; }
+
+        .reporte-box {
+            background: #f7f3ff; border-radius: 10px; padding: 20px;
+            display: grid; grid-template-columns: repeat(3,1fr); gap: 15px;
+        }
+        .reporte-item { text-align: center; }
+        .reporte-num { font-size: 28px; font-weight: bold; color: #553c9a; }
+        .reporte-label { font-size: 13px; color: #666; }
+
+        .historial-item {
+            border-bottom: 1px solid #f0f0f0; padding: 12px 0;
+            font-size: 14px; color: #444;
+        }
+        .historial-item:last-child { border-bottom: none; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+
+        .empty { text-align: center; color: #888; padding: 30px; }
+        .msg { padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        .msg-ok { background: #d1fae5; color: #065f46; }
+        .msg-err { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>👑 Lavadero App — Administrador</h1>
+    <div style="display:flex;align-items:center;gap:15px;">
+        <span id="nombreUsuario"></span>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('reporte', this)">📊 Reporte diario</div>
+        <div class="tab" onclick="showTab('servicios', this)">🧼 Servicios</div>
+        <div class="tab" onclick="showTab('historial', this)">🔍 Historial por patente</div>
+    </div>
+
+    <!-- REPORTE DIARIO -->
+    <div class="panel active" id="panel-reporte">
+        <div class="card">
+            <h2>📊 Reporte del día</h2>
+            <div style="display:flex;gap:10px;margin-bottom:20px;align-items:flex-end;">
+                <div style="flex:1">
+                    <label>Seleccioná una fecha</label>
+                    <input type="date" id="fecha-reporte">
+                </div>
+                <button class="btn btn-primary" onclick="cargarReporte()" style="margin-bottom:12px;">Ver reporte</button>
+            </div>
+            <div id="resultado-reporte" class="empty">Seleccioná una fecha para ver el reporte.</div>
+        </div>
+    </div>
+
+    <!-- SERVICIOS -->
+    <div class="panel" id="panel-servicios">
+        <div class="card">
+            <h2>➕ Agregar nuevo servicio</h2>
+            <div id="msg-servicio"></div>
+            <div class="form-row">
+                <div>
+                    <label>Nombre</label>
+                    <input type="text" id="srv-nombre" placeholder="Ej: Lavado Premium">
+                </div>
+                <div>
+                    <label>Precio ($)</label>
+                    <input type="number" id="srv-precio" placeholder="Ej: 8000" style="width:100%">
+                </div>
+                <div>
+                    <label>Duración (min)</label>
+                    <input type="number" id="srv-duracion" placeholder="Ej: 45" style="width:100%">
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="agregarServicio()">Agregar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🧼 Servicios actuales</h2>
+            <table>
+                <thead>
+                    <tr><th>Nombre</th><th>Precio</th><th>Duración</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tabla-servicios">
+                    <tr><td colspan="4" class="empty">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="panel" id="panel-historial">
+        <div class="card">
+            <h2>🔍 Historial de un vehículo</h2>
+            <div style="display:flex;gap:10px;margin-bottom:20px;align-items:flex-end;">
+                <div style="flex:1">
+                    <label>Patente</label>
+                    <input type="text" id="patente-buscar" placeholder="Ej: ABC123" style="text-transform:uppercase">
+                </div>
+                <button class="btn btn-primary" onclick="buscarHistorial()" style="margin-bottom:12px;">Buscar</button>
+            </div>
+            <div id="resultado-historial" class="empty">Ingresá una patente para ver su historial.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function init() {
+        const s = await fetch('/api/session').then(r=>r.json());
+        if (!s.user) { window.location.href='login.html'; return; }
+        document.getElementById('nombreUsuario').textContent = s.user.nombre;
+
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fecha-reporte').value = hoy;
+
+        cargarServicios();
+    }
+
+    // --- REPORTE ---
+    async function cargarReporte() {
+        const fecha = document.getElementById('fecha-reporte').value;
+        if (!fecha) return;
+
+        const data = await fetch(`/api/reporte/diario?fecha=${fecha}`).then(r=>r.json());
+        const el = document.getElementById('resultado-reporte');
+
+        el.innerHTML = `
+            <div class="reporte-box">
+                <div class="reporte-item">
+                    <div class="reporte-num">$${(data.total_ingresos||0).toLocaleString()}</div>
+                    <div class="reporte-label">💰 Total ingresos</div>
+                </div>
+                <div class="reporte-item">
+                    <div class="reporte-num">${data.servicios_realizados||0}</div>
+                    <div class="reporte-label">✅ Servicios realizados</div>
+                </div>
+                <div class="reporte-item">
+                    <div class="reporte-num">${data.turnos_cancelados||0}</div>
+                    <div class="reporte-label">❌ Turnos cancelados</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- SERVICIOS ---
+    async function cargarServicios() {
+        const servicios = await fetch('/api/servicios').then(r=>r.json());
+        const tbody = document.getElementById('tabla-servicios');
+
+        if (!servicios.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty">No hay servicios.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = servicios.map(s => `
+            <tr id="fila-${s.id}">
+                <td><span id="nombre-${s.id}">${s.nombre}</span></td>
+                <td>$<span id="precio-${s.id}">${s.precio.toLocaleString()}</span></td>
+                <td><span id="duracion-${s.id}">${s.duracion}</span> min</td>
+                <td style="display:flex;gap:6px;">
+                    <button class="btn btn-edit" onclick="editarServicio(${s.id}, '${s.nombre}', ${s.precio}, ${s.duracion})">✏️ Editar</button>
+                    <button class="btn btn-danger" onclick="eliminarServicio(${s.id})">🗑️ Eliminar</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function editarServicio(id, nombre, precio, duracion) {
+        const fila = document.getElementById(`fila-${id}`);
+        fila.innerHTML = `
+            <td><input type="text" id="edit-nombre-${id}" value="${nombre}" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px"></td>
+            <td>$<input type="number" id="edit-precio-${id}" value="${precio}" style="width:90px;padding:6px;border:1px solid #ddd;border-radius:4px"></td>
+            <td><input type="number" id="edit-duracion-${id}" value="${duracion}" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:4px"> min</td>
+            <td style="display:flex;gap:6px;">
+                <button class="btn btn-save" onclick="guardarServicio(${id})">💾 Guardar</button>
+                <button class="btn btn-danger" onclick="cargarServicios()">✖ Cancelar</button>
+            </td>
+        `;
+    }
+
+    async function guardarServicio(id) {
+        const nombre = document.getElementById(`edit-nombre-${id}`).value;
+        const precio = document.getElementById(`edit-precio-${id}`).value;
+        const duracion = document.getElementById(`edit-duracion-${id}`).value;
+
+        await fetch(`/api/servicios/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({nombre, precio, duracion})
+        });
+        cargarServicios();
+    }
+
+    async function eliminarServicio(id) {
+        if (!confirm('¿Eliminar este servicio?')) return;
+        await fetch(`/api/servicios/${id}`, {method:'DELETE'});
+        cargarServicios();
+    }
+
+    async function agregarServicio() {
+        const nombre = document.getElementById('srv-nombre').value.trim();
+        const precio = document.getElementById('srv-precio').value;
+        const duracion = document.getElementById('srv-duracion').value;
+        const msgEl = document.getElementById('msg-servicio');
+
+        if (!nombre || !precio || !duracion) {
+            msgEl.innerHTML = '<div class="msg msg-err">Completá todos los campos.</div>';
+            return;
+        }
+
+        const res = await fetch('/api/servicios', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({nombre, precio, duracion})
+        }).then(r=>r.json());
+
+        if (res.id) {
+            msgEl.innerHTML = '<div class="msg msg-ok">✅ Servicio agregado.</div>';
+            document.getElementById('srv-nombre').value = '';
+            document.getElementById('srv-precio').value = '';
+            document.getElementById('srv-duracion').value = '';
+            cargarServicios();
+            setTimeout(() => msgEl.innerHTML = '', 3000);
+        }
+    }
+
+    // --- HISTORIAL ---
+    async function buscarHistorial() {
+        const patente = document.getElementById('patente-buscar').value.trim().toUpperCase();
+        if (!patente) return;
+
+        const data = await fetch(`/api/historial/vehiculo?patente=${patente}`).then(r=>r.json());
+        const el = document.getElementById('resultado-historial');
+
+        if (!data.length) {
+            el.innerHTML = `<p class="empty">No se encontraron registros para la patente <strong>${patente}</strong>.</p>`;
+            return;
+        }
+
+        const total = data.reduce((acc, d) => acc + (d.pagado || d.precio || 0), 0);
+
+        el.innerHTML = `
+            <p style="margin-bottom:15px;color:#553c9a;font-weight:bold;">
+                📋 ${data.length} servicio(s) — Total histórico: $${total.toLocaleString()}
+            </p>
+            ${data.map(d => `
+                <div class="historial-item">
+                    📅 <strong>${d.fecha}</strong> ${d.hora} — 
+                    ${d.servicio} — 
+                    💰 $${(d.pagado || d.precio || 0).toLocaleString()}
+                </div>
+            `).join('')}
+        `;
+    }
+
+    function showTab(tab, el) {
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('panel-'+tab).classList.add('active');
+    }
+
+    async function logout() {
+        await fetch('/api/logout', {method:'POST'});
+        window.location.href = 'login.html';
+    }
+
+    init();
+</script>
+</body>
+</html>

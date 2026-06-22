@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Lavadero App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 350px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .info {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>🚗 Lavadero App</h2>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Contraseña" required>
+            <button type="submit">Ingresar</button>
+            <div id="error" class="error"></div>
+        </form>
+        <div class="info">
+            <strong>Cuentas de prueba:</strong><br>
+            Admin: admin@lavadero.com / admin<br>
+            Empleado: empleado@lavadero.com / empleado<br>
+            Cajero: cajero@lavadero.com / cajero<br>
+            Cliente: cliente@lavadero.com / cliente
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const rol = data.rol;
+                    if (rol === 'admin') window.location.href = 'admin.html';
+                    else if (rol === 'empleado') window.location.href = 'empleado.html';
+                    else if (rol === 'cajero') window.location.href = 'cajero.html';
+                    else window.location.href = 'cliente.html';
+                } else {
+                    document.getElementById('error').textContent = data.error;
+                }
+            } catch (error) {
+                document.getElementById('error').textContent = 'Error de conexión';
+            }
+        });
+    </script>
+</body>
+</html>

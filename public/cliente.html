@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cliente - Lavadero App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f4ff; min-height: 100vh; }
+
+        .topbar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .topbar h1 { font-size: 20px; }
+        .topbar span { font-size: 14px; opacity: 0.85; }
+        .logout-btn {
+            background: rgba(255,255,255,0.2); color: white;
+            border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; }
+        .tab {
+            padding: 10px 24px; border-radius: 8px; cursor: pointer;
+            border: 2px solid #667eea; color: #667eea; background: white;
+            font-size: 15px; font-weight: bold;
+        }
+        .tab.active { background: #667eea; color: white; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .card {
+            background: white; border-radius: 12px;
+            padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .card h2 { color: #444; margin-bottom: 18px; font-size: 18px; }
+
+        label { display: block; margin-bottom: 5px; color: #555; font-size: 14px; }
+        select, input[type="date"], input[type="time"] {
+            width: 100%; padding: 10px; border: 1px solid #ddd;
+            border-radius: 6px; font-size: 15px; margin-bottom: 14px;
+        }
+
+        .horarios-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 8px; margin-bottom: 14px;
+        }
+        .hora-btn {
+            padding: 10px; text-align: center; border-radius: 6px;
+            border: 2px solid #667eea; background: white; color: #667eea;
+            cursor: pointer; font-size: 14px;
+        }
+        .hora-btn.ocupada { border-color: #ddd; color: #bbb; cursor: not-allowed; background: #f9f9f9; }
+        .hora-btn.selected { background: #667eea; color: white; }
+
+        .btn {
+            padding: 12px 28px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 15px; font-weight: bold;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-danger { background: #e53e3e; color: white; font-size: 13px; padding: 7px 14px; }
+        .btn-danger:hover { background: #c53030; }
+
+        .turno-card {
+            border: 1px solid #e2e8f0; border-radius: 10px;
+            padding: 16px; margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .turno-info h3 { color: #333; font-size: 16px; }
+        .turno-info p { color: #666; font-size: 14px; margin-top: 4px; }
+
+        .badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: bold;
+        }
+        .badge-pendiente { background: #fef3c7; color: #d97706; }
+        .badge-proceso { background: #dbeafe; color: #2563eb; }
+        .badge-finalizado { background: #d1fae5; color: #059669; }
+        .badge-cancelado { background: #fee2e2; color: #dc2626; }
+
+        .msg { padding: 12px; border-radius: 8px; margin-bottom: 14px; text-align: center; }
+        .msg-ok { background: #d1fae5; color: #065f46; }
+        .msg-err { background: #fee2e2; color: #991b1b; }
+        .empty { text-align: center; color: #888; padding: 30px; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>🚗 Lavadero App — Cliente</h1>
+    <div style="display:flex;align-items:center;gap:15px;">
+        <span id="nombreUsuario"></span>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('sacar')">📅 Sacar turno</div>
+        <div class="tab" onclick="showTab('mis')">📋 Mis turnos</div>
+        <div class="tab" onclick="showTab('auto')">🚗 Agregar auto</div>
+    </div>
+
+    <!-- Panel: Sacar turno -->
+    <div class="panel active" id="panel-sacar">
+        <div class="card">
+            <h2>Reservar un turno</h2>
+            <div id="msg-sacar"></div>
+
+            <label>Mi vehículo</label>
+            <select id="vehiculo"></select>
+
+            <label>Servicio</label>
+            <select id="servicio"></select>
+
+            <label>Fecha</label>
+            <input type="date" id="fecha" onchange="cargarHorarios()">
+
+            <label>Elegí un horario disponible</label>
+            <div class="horarios-grid" id="horarios-grid">
+                <p style="color:#888;font-size:14px;">Seleccioná una fecha primero</p>
+            </div>
+            <input type="hidden" id="hora-seleccionada">
+
+            <button class="btn btn-primary" onclick="sacarTurno()">Confirmar turno</button>
+        </div>
+    </div>
+
+    <!-- Panel: Mis turnos -->
+    <div class="panel" id="panel-mis">
+        <div class="card">
+            <h2>Mis turnos</h2>
+            <div id="lista-turnos"><p class="empty">Cargando...</p></div>
+        </div>
+    </div>
+
+    <!-- Panel: Agregar auto -->
+    <div class="panel" id="panel-auto">
+        <div class="card">
+            <h2>🚗 Registrar mi auto</h2>
+            <div id="msg-auto"></div>
+            <label>Patente</label>
+            <input type="text" id="auto-patente" placeholder="Ej: ABC123" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:15px;margin-bottom:14px;text-transform:uppercase">
+            <label>Marca</label>
+            <input type="text" id="auto-marca" placeholder="Ej: Toyota" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:15px;margin-bottom:14px">
+            <label>Modelo</label>
+            <input type="text" id="auto-modelo" placeholder="Ej: Corolla" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:15px;margin-bottom:14px">
+            <button class="btn btn-primary" onclick="agregarAuto()">Registrar auto</button>
+        </div>
+    </div>
+
+<script>
+    const HORARIOS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+
+    async function init() {
+        const s = await fetch('/api/session').then(r=>r.json());
+        if (!s.user) { window.location.href='login.html'; return; }
+        document.getElementById('nombreUsuario').textContent = s.user.nombre;
+
+        const vehiculos = await fetch('/api/mis-vehiculos').then(r=>r.json());
+        const vSel = document.getElementById('vehiculo');
+        if (vehiculos.length === 0) {
+            vSel.innerHTML = '<option>No tenés vehículos registrados</option>';
+        } else {
+            vSel.innerHTML = vehiculos.map(v => `<option value="${v.id}">${v.patente} — ${v.marca} ${v.modelo}</option>`).join('');
+        }
+
+        const servicios = await fetch('/api/servicios').then(r=>r.json());
+        document.getElementById('servicio').innerHTML = servicios.map(s =>
+            `<option value="${s.id}">${s.nombre} — $${s.precio} (${s.duracion} min)</option>`
+        ).join('');
+
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fecha').min = hoy;
+    }
+
+    async function cargarHorarios() {
+        const fecha = document.getElementById('fecha').value;
+        if (!fecha) return;
+        document.getElementById('hora-seleccionada').value = '';
+        const data = await fetch(`/api/turnos/disponibles?fecha=${fecha}`).then(r=>r.json());
+        const ocupadas = data.ocupadas || [];
+        const grid = document.getElementById('horarios-grid');
+        grid.innerHTML = HORARIOS.map(h => {
+            const occ = ocupadas.includes(h);
+            return `<button class="hora-btn ${occ?'ocupada':''}" 
+                ${occ?'disabled':''} onclick="seleccionarHora('${h}', this)">${h}</button>`;
+        }).join('');
+    }
+
+    function seleccionarHora(hora, btn) {
+        document.querySelectorAll('.hora-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('hora-seleccionada').value = hora;
+    }
+
+    async function sacarTurno() {
+        const fecha = document.getElementById('fecha').value;
+        const hora = document.getElementById('hora-seleccionada').value;
+        const id_servicio = document.getElementById('servicio').value;
+        const id_vehiculo = document.getElementById('vehiculo').value;
+        const msgEl = document.getElementById('msg-sacar');
+
+        if (!fecha || !hora || !id_servicio || !id_vehiculo) {
+            msgEl.innerHTML = '<div class="msg msg-err">Completá todos los campos y elegí un horario.</div>';
+            return;
+        }
+
+        const res = await fetch('/api/turnos', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({fecha, hora, id_servicio, id_vehiculo})
+        }).then(r=>r.json());
+
+        if (res.id) {
+            msgEl.innerHTML = '<div class="msg msg-ok">✅ Turno reservado con éxito!</div>';
+            document.getElementById('fecha').value = '';
+            document.getElementById('hora-seleccionada').value = '';
+            document.getElementById('horarios-grid').innerHTML = '<p style="color:#888;font-size:14px;">Seleccioná una fecha primero</p>';
+            cargarMisTurnos();
+        } else {
+            msgEl.innerHTML = `<div class="msg msg-err">Error: ${res.error}</div>`;
+        }
+    }
+
+    async function cargarMisTurnos() {
+        const turnos = await fetch('/api/mis-turnos').then(r=>r.json());
+        const el = document.getElementById('lista-turnos');
+        if (!turnos.length) { el.innerHTML = '<p class="empty">No tenés turnos aún.</p>'; return; }
+        el.innerHTML = turnos.map(t => `
+            <div class="turno-card">
+                <div class="turno-info">
+                    <h3>${t.patente} — ${t.marca} ${t.modelo}</h3>
+                    <p>📅 ${t.fecha} a las ${t.hora} — ${t.servicio_nombre} ($${t.precio})</p>
+                    <span class="badge badge-${t.estado}">${t.estado}</span>
+                </div>
+                ${t.estado === 'pendiente' ? `<button class="btn btn-danger" onclick="cancelar(${t.id})">Cancelar</button>` : ''}
+            </div>
+        `).join('');
+    }
+
+    async function cancelar(id) {
+        if (!confirm('¿Cancelar este turno?')) return;
+        await fetch(`/api/turnos/${id}/cancelar`, {method:'PUT'});
+        cargarMisTurnos();
+    }
+
+    function showTab(tab) {
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('panel-'+tab).classList.add('active');
+        if (tab === 'mis') cargarMisTurnos();
+    }
+
+    async function agregarAuto() {
+        const patente = document.getElementById('auto-patente').value.trim();
+        const marca = document.getElementById('auto-marca').value.trim();
+        const modelo = document.getElementById('auto-modelo').value.trim();
+        const msgEl = document.getElementById('msg-auto');
+
+        if (!patente || !marca || !modelo) {
+            msgEl.innerHTML = '<div class="msg msg-err">Completá todos los campos.</div>';
+            return;
+        }
+
+        const res = await fetch('/api/mis-vehiculos', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({patente, marca, modelo})
+        }).then(r=>r.json());
+
+        if (res.id) {
+            msgEl.innerHTML = '<div class="msg msg-ok">✅ Auto registrado! Ya podés sacar un turno.</div>';
+            document.getElementById('auto-patente').value = '';
+            document.getElementById('auto-marca').value = '';
+            document.getElementById('auto-modelo').value = '';
+            // Recargar lista de vehículos
+            const vehiculos = await fetch('/api/mis-vehiculos').then(r=>r.json());
+            document.getElementById('vehiculo').innerHTML = vehiculos.map(v =>
+                `<option value="${v.id}">${v.patente} — ${v.marca} ${v.modelo}</option>`
+            ).join('');
+        } else {
+            msgEl.innerHTML = `<div class="msg msg-err">Error: ${res.error}</div>`;
+        }
+    }
+
+    async function logout() {
+        await fetch('/api/logout', {method:'POST'});
+        window.location.href = 'login.html';
+    }
+
+    init();
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cajero - Lavadero App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #fff9f0; min-height: 100vh; }
+
+        .topbar {
+            background: linear-gradient(135deg, #dd6b20, #c05621);
+            color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .topbar h1 { font-size: 20px; }
+        .logout-btn {
+            background: rgba(255,255,255,0.2); color: white;
+            border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+
+        .stats {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white; border-radius: 10px; padding: 20px;
+            text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .stat-num { font-size: 36px; font-weight: bold; color: #dd6b20; }
+        .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
+
+        .card {
+            background: white; border-radius: 12px; padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px;
+        }
+        .card h2 { color: #444; margin-bottom: 18px; font-size: 18px; }
+
+        .pago-card {
+            border: 1px solid #fed7aa; border-radius: 10px;
+            padding: 18px; margin-bottom: 14px; background: #fffaf5;
+        }
+        .pago-header {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 12px;
+        }
+        .pago-info h3 { color: #333; font-size: 16px; }
+        .pago-info p { color: #666; font-size: 14px; margin-top: 3px; }
+        .pago-monto { font-size: 22px; font-weight: bold; color: #dd6b20; }
+
+        .medio-pago {
+            display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+        }
+        .medio-btn {
+            padding: 8px 16px; border: 2px solid #dd6b20; background: white;
+            color: #dd6b20; border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        .medio-btn.selected { background: #dd6b20; color: white; }
+
+        .btn-cobrar {
+            background: #dd6b20; color: white; border: none;
+            padding: 10px 22px; border-radius: 8px; cursor: pointer;
+            font-size: 14px; font-weight: bold;
+        }
+        .btn-cobrar:hover { background: #c05621; }
+
+        .empty { text-align: center; color: #888; padding: 40px; font-size: 15px; }
+
+        .comprobante {
+            background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 8px;
+            padding: 12px; color: #065f46; font-size: 14px; margin-top: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>💰 Lavadero App — Cajero</h1>
+    <div style="display:flex;align-items:center;gap:15px;">
+        <span id="nombreUsuario"></span>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-num" id="cnt-pendientes">0</div>
+            <div class="stat-label">Pagos pendientes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" id="total-dia">$0</div>
+            <div class="stat-label">Cobrado hoy</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>💳 Servicios a cobrar</h2>
+        <div id="lista-pagos"><p class="empty">Cargando...</p></div>
+    </div>
+</div>
+
+<script>
+    let cobradoHoy = 0;
+
+    async function init() {
+        const s = await fetch('/api/session').then(r=>r.json());
+        if (!s.user) { window.location.href='login.html'; return; }
+        document.getElementById('nombreUsuario').textContent = s.user.nombre;
+        cargarPagos();
+    }
+
+    async function cargarPagos() {
+        const pagos = await fetch('/api/pagos/pendientes').then(r=>r.json());
+        document.getElementById('cnt-pendientes').textContent = pagos.length;
+
+        const el = document.getElementById('lista-pagos');
+        if (!pagos.length) {
+            el.innerHTML = '<p class="empty">✅ No hay servicios pendientes de cobro.</p>';
+            return;
+        }
+
+        el.innerHTML = pagos.map(p => `
+            <div class="pago-card" id="pago-${p.turno_id}">
+                <div class="pago-header">
+                    <div class="pago-info">
+                        <h3>🚗 ${p.patente} — ${p.cliente}</h3>
+                        <p>📅 ${p.fecha} ${p.hora} — ${p.servicio}</p>
+                    </div>
+                    <div class="pago-monto">$${p.precio.toLocaleString()}</div>
+                </div>
+                <p style="font-size:13px;color:#555;margin-bottom:8px;"><strong>Medio de pago:</strong></p>
+                <div class="medio-pago">
+                    <button class="medio-btn" onclick="seleccionarMedio(${p.turno_id}, 'efectivo', this)">💵 Efectivo</button>
+                    <button class="medio-btn" onclick="seleccionarMedio(${p.turno_id}, 'tarjeta', this)">💳 Tarjeta</button>
+                    <button class="medio-btn" onclick="seleccionarMedio(${p.turno_id}, 'transferencia', this)">📱 Transferencia</button>
+                </div>
+                <button class="btn-cobrar" onclick="registrarPago(${p.turno_id}, ${p.precio})">
+                    ✅ Registrar cobro
+                </button>
+                <div class="comprobante" id="comp-${p.turno_id}">
+                    ✔ Pago registrado correctamente
+                </div>
+            </div>
+        `).join('');
+
+        // guardar medios seleccionados
+        window.mediosSeleccionados = {};
+    }
+
+    function seleccionarMedio(turnoId, medio, btn) {
+        const card = document.getElementById(`pago-${turnoId}`);
+        card.querySelectorAll('.medio-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        if (!window.mediosSeleccionados) window.mediosSeleccionados = {};
+        window.mediosSeleccionados[turnoId] = medio;
+    }
+
+    async function registrarPago(turnoId, monto) {
+        const medio = window.mediosSeleccionados?.[turnoId];
+        if (!medio) {
+            alert('Seleccioná un medio de pago primero.');
+            return;
+        }
+
+        const res = await fetch('/api/pagos', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ id_turno: turnoId, medio_pago: medio, monto })
+        }).then(r=>r.json());
+
+        if (res.success) {
+            const comp = document.getElementById(`comp-${turnoId}`);
+            comp.style.display = 'block';
+            const card = document.getElementById(`pago-${turnoId}`);
+            card.style.opacity = '0.6';
+            card.querySelectorAll('button').forEach(b => b.disabled = true);
+
+            cobradoHoy += monto;
+            document.getElementById('total-dia').textContent = '$' + cobradoHoy.toLocaleString();
+
+            const cnt = parseInt(document.getElementById('cnt-pendientes').textContent) - 1;
+            document.getElementById('cnt-pendientes').textContent = cnt;
+        }
+    }
+
+    async function logout() {
+        await fetch('/api/logout', {method:'POST'});
+        window.location.href = 'login.html';
+    }
+
+    init();
+</script>
+</body>
+</html>

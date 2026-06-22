@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empleado - Lavadero App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f7f0; min-height: 100vh; }
+
+        .topbar {
+            background: linear-gradient(135deg, #38a169, #276749);
+            color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .topbar h1 { font-size: 20px; }
+        .logout-btn {
+            background: rgba(255,255,255,0.2); color: white;
+            border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+
+        .fecha-hoy {
+            background: white; border-radius: 10px; padding: 14px 20px;
+            margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            color: #444; font-size: 15px;
+        }
+        .fecha-hoy strong { color: #38a169; }
+
+        .turno-card {
+            background: white; border-radius: 12px; padding: 20px;
+            margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            border-left: 5px solid #e2e8f0;
+        }
+        .turno-card.pendiente { border-left-color: #f6ad55; }
+        .turno-card.en-proceso { border-left-color: #4299e1; }
+        .turno-card.finalizado { border-left-color: #48bb78; }
+
+        .turno-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+        .turno-hora { font-size: 24px; font-weight: bold; color: #333; }
+        .turno-patente {
+            font-size: 18px; font-weight: bold; background: #1a202c;
+            color: white; padding: 4px 12px; border-radius: 6px; letter-spacing: 2px;
+        }
+
+        .turno-detalle { color: #555; font-size: 15px; margin-bottom: 14px; }
+        .turno-detalle p { margin-bottom: 4px; }
+
+        .acciones { display: flex; gap: 10px; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 14px; font-weight: bold;
+        }
+        .btn-proceso { background: #4299e1; color: white; }
+        .btn-proceso:hover { background: #3182ce; }
+        .btn-finalizar { background: #48bb78; color: white; }
+        .btn-finalizar:hover { background: #38a169; }
+
+        .badge {
+            display: inline-block; padding: 5px 14px; border-radius: 20px;
+            font-size: 13px; font-weight: bold;
+        }
+        .badge-pendiente { background: #fef3c7; color: #d97706; }
+        .badge-proceso { background: #dbeafe; color: #2563eb; }
+        .badge-finalizado { background: #d1fae5; color: #059669; }
+        .badge-cancelado { background: #fee2e2; color: #dc2626; }
+
+        .empty { text-align: center; color: #888; padding: 50px; font-size: 16px; }
+        .stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white; border-radius: 10px; padding: 16px;
+            text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .stat-num { font-size: 32px; font-weight: bold; color: #38a169; }
+        .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>👨‍🔧 Lavadero App — Empleado</h1>
+    <div style="display:flex;align-items:center;gap:15px;">
+        <span id="nombreUsuario"></span>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="fecha-hoy">
+        📅 Turnos del día: <strong id="fechaHoy"></strong>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-num" id="cnt-pendiente">0</div>
+            <div class="stat-label">Pendientes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" style="color:#4299e1" id="cnt-proceso">0</div>
+            <div class="stat-label">En proceso</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" id="cnt-finalizado">0</div>
+            <div class="stat-label">Finalizados</div>
+        </div>
+    </div>
+
+    <div id="lista-turnos"><p class="empty">Cargando turnos...</p></div>
+</div>
+
+<script>
+    let turnosData = [];
+
+    async function init() {
+        const s = await fetch('/api/session').then(r=>r.json());
+        if (!s.user) { window.location.href='login.html'; return; }
+        document.getElementById('nombreUsuario').textContent = s.user.nombre;
+
+        const hoy = new Date();
+        document.getElementById('fechaHoy').textContent = hoy.toLocaleDateString('es-AR', {
+            weekday:'long', year:'numeric', month:'long', day:'numeric'
+        });
+
+        await cargarTurnos();
+        setInterval(cargarTurnos, 30000); // actualiza cada 30 segundos
+    }
+
+    async function cargarTurnos() {
+        turnosData = await fetch('/api/turnos/hoy').then(r=>r.json());
+
+        document.getElementById('cnt-pendiente').textContent = turnosData.filter(t=>t.estado==='pendiente').length;
+        document.getElementById('cnt-proceso').textContent = turnosData.filter(t=>t.estado==='en_proceso').length;
+        document.getElementById('cnt-finalizado').textContent = turnosData.filter(t=>t.estado==='finalizado').length;
+
+        const el = document.getElementById('lista-turnos');
+        if (!turnosData.length) {
+            el.innerHTML = '<p class="empty">🎉 No hay turnos para hoy.</p>';
+            return;
+        }
+
+        el.innerHTML = turnosData.map(t => `
+            <div class="turno-card ${t.estado === 'en_proceso' ? 'en-proceso' : t.estado}">
+                <div class="turno-header">
+                    <span class="turno-hora">🕐 ${t.hora}</span>
+                    <span class="turno-patente">${t.patente}</span>
+                </div>
+                <div class="turno-detalle">
+                    <p>🚗 <strong>${t.marca} ${t.modelo}</strong> — Cliente: ${t.cliente_nombre}</p>
+                    <p>🧼 Servicio: <strong>${t.servicio_nombre}</strong></p>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span class="badge badge-${t.estado === 'en_proceso' ? 'proceso' : t.estado}">${estadoLabel(t.estado)}</span>
+                    <div class="acciones">
+                        ${t.estado === 'pendiente' ? `<button class="btn btn-proceso" onclick="cambiarEstado(${t.id}, 'en_proceso')">▶ Iniciar</button>` : ''}
+                        ${t.estado === 'en_proceso' ? `<button class="btn btn-finalizar" onclick="cambiarEstado(${t.id}, 'finalizado')">✅ Finalizar</button>` : ''}
+                        ${t.estado === 'finalizado' ? `<span style="color:#48bb78;font-weight:bold;">✔ Completado</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function estadoLabel(e) {
+        return { pendiente:'⏳ Pendiente', en_proceso:'🔄 En proceso', finalizado:'✅ Finalizado', cancelado:'❌ Cancelado' }[e] || e;
+    }
+
+    async function cambiarEstado(id, estado) {
+        await fetch(`/api/turnos/${id}/estado`, {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({estado})
+        });
+        cargarTurnos();
+    }
+
+    async function logout() {
+        await fetch('/api/logout', {method:'POST'});
+        window.location.href = 'login.html';
+    }
+
+    init();
+</script>
+</body>
+</html>
